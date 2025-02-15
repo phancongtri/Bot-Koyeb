@@ -6,7 +6,7 @@ const express = require('express');
 const TOKEN = process.env.7578384719:AAE7BWfKE5BQzQ1ExjFyHJ1zqespNccn-Jc;
 
 // 🔥 URL app của Koyeb (THAY BẰNG URL THẬT CỦA MÀY)
-const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const WEBHOOK_URL = process.env.https://tired-gwenni-phancongtri-266081e1.koyeb.app;
 
 // Khởi tạo bot với webhook
 const bot = new TelegramBot(TOKEN);
