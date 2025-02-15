@@ -12,7 +12,12 @@ app.use(express.json());
 
 // Route kiểm tra server đang chạy
 app.get("/", (req, res) => {
-    res.send("✅ Server is running! Koyeb is OK!");
+    res.send("✅ OK - Server is running!");
+});
+
+// Route cho healthcheck (Koyeb cần)
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "healthy" });
 });
 
 // Route webhook cho Telegram
