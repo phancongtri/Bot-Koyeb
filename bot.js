@@ -5,11 +5,11 @@ const TOKEN = '7578384719:AAE7BWfKE5BQzQ1ExjFyHJ1zqespNccn-Jc';
 const WEBHOOK_URL = 'https://supposed-turkey-phancongtri-db2ca112.koyeb.app';
 const PORT = process.env.PORT || 8000;
 
-const bot = new TelegramBot(TOKEN);
+const bot = new TelegramBot(TOKEN, { webHook: true });
 const app = express();
 app.use(express.json());
 
-// Healthcheck (Để Koyeb xác nhận bot chạy)
+// Healthcheck để Koyeb xác nhận bot đang chạy
 app.get("/", (req, res) => {
     res.send("✅ OK - Server is running!");
 });
@@ -24,7 +24,7 @@ app.post(`/bot${TOKEN}`, (req, res) => {
     res.sendStatus(200);
 });
 
-// Lắng nghe cổng trên server
+// Lắng nghe cổng để server không bị đóng
 app.listen(PORT, () => {
     console.log(`✅ Server đang chạy trên port ${PORT}`);
     bot.setWebHook(`${WEBHOOK_URL}/bot${TOKEN}`);
