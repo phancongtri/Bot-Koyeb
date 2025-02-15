@@ -1,5 +1,6 @@
+
 {
-  "name": "reminder-bot",
+  "name": "ReminderBot",
   "version": "1.0.0",
   "description": "Telegram Reminder Bot chạy trên Koyeb",
   "main": "bot.js",

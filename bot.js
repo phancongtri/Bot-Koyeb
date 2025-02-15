@@ -2,30 +2,26 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 
-// 🔥 Thay token bot Telegram vào đây
-const TOKEN = process.env.7578384719:AAE7BWfKE5BQzQ1ExjFyHJ1zqespNccn-Jc;
-
-// 🔥 URL app của Koyeb (THAY BẰNG URL THẬT CỦA MÀY)
-const WEBHOOK_URL = process.env.https://tired-gwenni-phancongtri-266081e1.koyeb.app;
+// Lấy token từ biến môi trường
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const PORT = process.env.PORT || 8000;
 
 // Khởi tạo bot với webhook
 const bot = new TelegramBot(TOKEN);
 const app = express();
-const PORT = process.env.PORT || 8000;
-
-// Middleware xử lý JSON từ Telegram
 app.use(express.json());
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
 });
 
-// 📌 Health Check để Koyeb nhận diện service đã chạy
+// Health check cho Koyeb
 app.get("/", (req, res) => {
     res.send("OK - Bot is running!");
 });
 
-// Lắng nghe cổng trên Koyeb
+// Lắng nghe trên cổng 8000
 app.listen(PORT, () => {
     console.log(`✅ Server đang chạy trên port ${PORT}`);
 });
@@ -35,88 +31,79 @@ bot.setWebHook(`${WEBHOOK_URL}/bot${TOKEN}`);
 
 const reminders = {}; // Lưu nhắc nhở theo chatId
 
-// 📌 Khi bấm /start => Chỉ hiển thị tin nhắn
+// Menu tùy chọn
+const menuKeyboard = {
+    reply_markup: {
+        keyboard: [
+            [{ text: "/add" }, { text: "/reply" }],
+            [{ text: "/all" }, { text: "/remove" }]
+        ],
+        resize_keyboard: true,
+        one_time_keyboard: false
+    }
+};
+
+// Lệnh /start
 bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, "Chào mừng bạn đến với bot nhắc nhở! Hãy sử dụng các lệnh sau:\n\n" +
-        "/add [nội dung] [HH:MM] [ngày] - Thêm nhắc nhở một lần\n" +
-        "/reply [nội dung] [ngày] - Lặp lại nhắc nhở hàng tháng\n" +
-        "/all - Hiển thị tất cả nhắc nhở\n" +
-        "/remove [số thứ tự] - Xóa nhắc nhở theo số thứ tự");
+    bot.sendMessage(msg.chat.id, "Chào mừng bạn đến với bot nhắc nhở! Hãy sử dụng các lệnh sau:", menuKeyboard);
 });
 
-// 📌 Lệnh /add [nội dung] [HH:MM] [ngày]
+// Lệnh /add
 bot.onText(/\/add (.+) (\d{2}:\d{2})? (\d{1,2})?/, (msg, match) => {
     const chatId = msg.chat.id;
     const content = match[1];
-    const time = match[2] || "08:00"; // Mặc định 08:00 nếu không nhập giờ
-    const day = match[3] ? parseInt(match[3]) : new Date().getDate(); // Mặc định là hôm nay
-
+    const time = match[2] || "08:00";
+    const day = match[3] ? parseInt(match[3]) : new Date().getDate();
+    
     const now = new Date();
     const targetDate = new Date(now.getFullYear(), now.getMonth(), day, time.split(':')[0], time.split(':')[1]);
-
     if (targetDate < now) targetDate.setMonth(targetDate.getMonth() + 1);
 
     if (!reminders[chatId]) reminders[chatId] = [];
-    reminders[chatId].push({ type: "one-time", content, time, day, date: targetDate });
-
-    bot.sendMessage(chatId, `✅ Đã đặt nhắc nhở: *${content}* vào lúc *${time}* ngày *${day}*`, { parse_mode: "Markdown" });
-
-    setTimeout(() => {
-        bot.sendMessage(chatId, `🔔 Nhắc nhở: *${content}*`, { parse_mode: "Markdown" });
-    }, targetDate - now);
+    reminders[chatId].push({ content, time, day, date: targetDate });
+    
+    bot.sendMessage(chatId, `✅ Nhắc nhở: ${content} vào ${time} ngày ${day}`);
+    setTimeout(() => bot.sendMessage(chatId, `🔔 Nhắc nhở: ${content}`), targetDate - now);
 });
 
-// 📌 Lệnh /reply [nội dung] [ngày]
+// Lệnh /reply
 bot.onText(/\/reply (.+) (\d{1,2})/, (msg, match) => {
     const chatId = msg.chat.id;
     const content = match[1];
     const day = parseInt(match[2]);
-
-    const now = new Date();
-    const time = "08:00"; // Mặc định 08:00
-    let targetDate = new Date(now.getFullYear(), now.getMonth(), day, 8, 0);
-
-    if (targetDate < now) targetDate.setMonth(targetDate.getMonth() + 1);
-
+    
     if (!reminders[chatId]) reminders[chatId] = [];
-    reminders[chatId].push({ type: "monthly", content, time, day });
-
-    bot.sendMessage(chatId, `✅ Đã đặt nhắc nhở hàng tháng: *${content}* vào ngày *${day}*`, { parse_mode: "Markdown" });
-
+    reminders[chatId].push({ content, type: "monthly", day });
+    
+    bot.sendMessage(chatId, `✅ Nhắc nhở hàng tháng: ${content} vào ngày ${day}`);
     setInterval(() => {
-        const today = new Date();
-        if (today.getDate() === day) {
-            bot.sendMessage(chatId, `🔔 [Hằng tháng] Nhắc nhở: *${content}*`, { parse_mode: "Markdown" });
-        }
-    }, 86400000); // Kiểm tra mỗi ngày (24 giờ)
+        if (new Date().getDate() === day) bot.sendMessage(chatId, `🔔 Nhắc nhở: ${content}`);
+    }, 86400000);
 });
 
-// 📌 Lệnh /all: Hiển thị tất cả nhắc nhở
+// Lệnh /all
 bot.onText(/\/all/, (msg) => {
     const chatId = msg.chat.id;
     if (!reminders[chatId] || reminders[chatId].length === 0) {
         bot.sendMessage(chatId, "📋 Không có nhắc nhở nào.");
         return;
     }
-
+    
     let text = "📋 Danh sách nhắc nhở:\n";
-    reminders[chatId].forEach((reminder, index) => {
-        text += `${index + 1}. *${reminder.content}* - ${reminder.time} (Ngày ${reminder.day})\n`;
+    reminders[chatId].forEach((r, i) => {
+        text += `${i + 1}. ${r.content} - ${r.time || "08:00"} (Ngày ${r.day})\n`;
     });
-
-    bot.sendMessage(chatId, text, { parse_mode: "Markdown" });
+    bot.sendMessage(chatId, text);
 });
 
-// 📌 Lệnh /remove [số thứ tự]
+// Lệnh /remove
 bot.onText(/\/remove (\d+)/, (msg, match) => {
     const chatId = msg.chat.id;
     const index = parseInt(match[1]) - 1;
-
     if (!reminders[chatId] || !reminders[chatId][index]) {
         bot.sendMessage(chatId, "❌ Không tìm thấy nhắc nhở này.");
         return;
     }
-
     const removed = reminders[chatId].splice(index, 1);
-    bot.sendMessage(chatId, `✅ Đã xóa nhắc nhở: *${removed[0].content}*`, { parse_mode: "Markdown" });
+    bot.sendMessage(chatId, `✅ Đã xóa nhắc nhở: ${removed[0].content}`);
 });
