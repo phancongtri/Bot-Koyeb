@@ -2,26 +2,27 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 
-// Lấy token từ biến môi trường
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const TOKEN = '7578384719:AAE7BWfKE5BQzQ1ExjFyHJ1zqespNccn-Jc';
+const WEBHOOK_URL = 'https://supposed-turkey-phancongtri-db2ca112.koyeb.app';
 const PORT = process.env.PORT || 8000;
 
-// Khởi tạo bot với webhook
 const bot = new TelegramBot(TOKEN);
 const app = express();
 app.use(express.json());
-app.post(`/bot${TOKEN}`, (req, res) => {
-    bot.processUpdate(req.body);
-    res.sendStatus(200);
-});
 
-// Health check cho Koyeb
+// Kiểm tra server có đang chạy không
 app.get("/", (req, res) => {
     res.send("OK - Bot is running!");
 });
 
-// Lắng nghe trên cổng 8000
+// Lắng nghe request từ Telegram
+app.post(`/bot${TOKEN}`, (req, res) => {
+    console.log("📩 Nhận request từ Telegram:", req.body);
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
+});
+
+// Chạy server
 app.listen(PORT, () => {
     console.log(`✅ Server đang chạy trên port ${PORT}`);
 });
